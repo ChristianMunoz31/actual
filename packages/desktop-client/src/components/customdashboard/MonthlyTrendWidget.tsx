@@ -19,14 +19,18 @@ import {
 } from 'recharts';
 
 import { FinancialText } from '#components/FinancialText';
+import { PrivacyFilter } from '#components/PrivacyFilter';
 import { useRechartsAnimation } from '#components/reports/chart-theme';
 import { Container } from '#components/reports/Container';
+import { getCustomTick } from '#components/reports/getCustomTick';
 import { useFormat } from '#hooks/useFormat';
+import { usePrivacyMode } from '#hooks/usePrivacyMode';
 
 import { useMonthlyTrend } from './useDashboardData';
 import type { MonthlyTrendRow } from './useDashboardData';
 
 type MonthlyTrendWidgetProps = {
+  month: string;
   numMonths?: number;
 };
 
@@ -44,6 +48,9 @@ function CustomTooltip({ active, payload, format }: TooltipProps) {
   }
 
   const row = payload[0].payload;
+  const income = row.income || 0;
+  const expense = row.expense || 0;
+  const net = income - expense || 0;
   return (
     <div
       className={css({
@@ -60,31 +67,43 @@ function CustomTooltip({ active, payload, format }: TooltipProps) {
       </div>
       <AlignedText
         left={t('Income:')}
-        right={<FinancialText>{format(row.income, 'financial')}</FinancialText>}
+        right={
+          <PrivacyFilter>
+            <FinancialText>{format(income, 'financial')}</FinancialText>
+          </PrivacyFilter>
+        }
       />
       <AlignedText
         left={t('Expenses:')}
         right={
-          <FinancialText>{format(row.expense, 'financial')}</FinancialText>
+          <PrivacyFilter>
+            <FinancialText>{format(expense, 'financial')}</FinancialText>
+          </PrivacyFilter>
         }
       />
       <AlignedText
         left={t('Net:')}
         right={
-          <FinancialText as="strong">
-            {format(row.income - row.expense, 'financial')}
-          </FinancialText>
+          <PrivacyFilter>
+            <FinancialText as="strong">
+              {format(net, 'financial')}
+            </FinancialText>
+          </PrivacyFilter>
         }
       />
     </div>
   );
 }
 
-export function MonthlyTrendWidget({ numMonths = 6 }: MonthlyTrendWidgetProps) {
+export function MonthlyTrendWidget({
+  month,
+  numMonths = 6,
+}: MonthlyTrendWidgetProps) {
   const { t } = useTranslation();
   const animationProps = useRechartsAnimation();
   const format = useFormat();
-  const { data, isLoading } = useMonthlyTrend(numMonths);
+  const privacyMode = usePrivacyMode();
+  const { data, isLoading } = useMonthlyTrend(numMonths, month);
 
   return (
     <View style={{ padding: 15, height: '100%' }}>
@@ -104,6 +123,13 @@ export function MonthlyTrendWidget({ numMonths = 6 }: MonthlyTrendWidgetProps) {
           {(width, height) => (
             <LineChart
               responsive
+              accessibilityLayer
+              aria-label={t(
+                'Income versus expenses over the last {{count}} months',
+                {
+                  count: numMonths,
+                },
+              )}
               width={width}
               height={height}
               data={data}
@@ -117,7 +143,12 @@ export function MonthlyTrendWidget({ numMonths = 6 }: MonthlyTrendWidgetProps) {
                 tickLine={{ stroke: theme.pageText }}
               />
               <YAxis
-                tickFormatter={value => format(value, 'financial-no-decimals')}
+                tickFormatter={value =>
+                  getCustomTick(
+                    format(value, 'financial-no-decimals'),
+                    privacyMode,
+                  )
+                }
                 tick={{ fill: theme.pageText, fontSize: 11 }}
                 tickLine={{ stroke: theme.pageText }}
                 tickSize={0}

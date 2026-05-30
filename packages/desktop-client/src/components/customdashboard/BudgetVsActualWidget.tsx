@@ -18,11 +18,14 @@ import {
 } from 'recharts';
 
 import { FinancialText } from '#components/FinancialText';
+import { PrivacyFilter } from '#components/PrivacyFilter';
 import { useRechartsAnimation } from '#components/reports/chart-theme';
 import { Container } from '#components/reports/Container';
+import { getCustomTick } from '#components/reports/getCustomTick';
 import { useFormat } from '#hooks/useFormat';
+import { usePrivacyMode } from '#hooks/usePrivacyMode';
 
-import { useMonthlyCategoryBudget } from './useDashboardData';
+import { topNWithOther, useMonthlyCategoryBudget } from './useDashboardData';
 import type { CategoryBudgetRow } from './useDashboardData';
 
 type BudgetVsActualWidgetProps = {
@@ -43,6 +46,9 @@ function CustomTooltip({ active, payload, format }: TooltipProps) {
   }
 
   const row = payload[0].payload;
+  const budgeted = row.budgeted || 0;
+  const spent = row.spent || 0;
+  const remaining = budgeted - spent || 0;
   return (
     <div
       className={css({
@@ -60,19 +66,27 @@ function CustomTooltip({ active, payload, format }: TooltipProps) {
       <AlignedText
         left={t('Budgeted:')}
         right={
-          <FinancialText>{format(row.budgeted, 'financial')}</FinancialText>
+          <PrivacyFilter>
+            <FinancialText>{format(budgeted, 'financial')}</FinancialText>
+          </PrivacyFilter>
         }
       />
       <AlignedText
         left={t('Spent:')}
-        right={<FinancialText>{format(row.spent, 'financial')}</FinancialText>}
+        right={
+          <PrivacyFilter>
+            <FinancialText>{format(spent, 'financial')}</FinancialText>
+          </PrivacyFilter>
+        }
       />
       <AlignedText
         left={t('Remaining:')}
         right={
-          <FinancialText as="strong">
-            {format(row.budgeted - row.spent, 'financial')}
-          </FinancialText>
+          <PrivacyFilter>
+            <FinancialText as="strong">
+              {format(remaining, 'financial')}
+            </FinancialText>
+          </PrivacyFilter>
         }
       />
     </div>
@@ -83,9 +97,15 @@ export function BudgetVsActualWidget({ month }: BudgetVsActualWidgetProps) {
   const { t } = useTranslation();
   const animationProps = useRechartsAnimation();
   const format = useFormat();
+  const privacyMode = usePrivacyMode();
   const { data, isLoading } = useMonthlyCategoryBudget(month);
 
-  const chartData = data.filter(row => row.budgeted !== 0 || row.spent !== 0);
+  const chartData = topNWithOther(
+    data.filter(row => row.budgeted !== 0 || row.spent !== 0),
+    10,
+    row => Math.max(row.budgeted, row.spent),
+    t('Other'),
+  );
 
   return (
     <View style={{ padding: 15, height: '100%' }}>
@@ -113,6 +133,8 @@ export function BudgetVsActualWidget({ month }: BudgetVsActualWidgetProps) {
           {(width, height) => (
             <BarChart
               responsive
+              accessibilityLayer
+              aria-label={t('Budgeted versus actual spending by category')}
               width={width}
               height={height}
               data={chartData}
@@ -128,7 +150,12 @@ export function BudgetVsActualWidget({ month }: BudgetVsActualWidgetProps) {
                 tickLine={{ stroke: theme.pageText }}
               />
               <YAxis
-                tickFormatter={value => format(value, 'financial-no-decimals')}
+                tickFormatter={value =>
+                  getCustomTick(
+                    format(value, 'financial-no-decimals'),
+                    privacyMode,
+                  )
+                }
                 tick={{ fill: theme.pageText, fontSize: 11 }}
                 tickLine={{ stroke: theme.pageText }}
                 tickSize={0}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
+import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import { SvgArrowLeft, SvgArrowRight } from '@actual-app/components/icons/v1';
 import { styles } from '@actual-app/components/styles';
 import { Text } from '@actual-app/components/text';
@@ -19,7 +20,15 @@ const CARD_HEIGHT = 380;
 
 export function CustomDashboard() {
   const { t } = useTranslation();
+  const { isNarrowWidth, atLeastMediumWidth } = useResponsive();
   const [month, setMonth] = useState(monthUtils.currentMonth());
+
+  const maxMonth = monthUtils.currentMonth();
+  const atMaxMonth = month >= maxMonth;
+
+  // 1 column when narrow, 2 at small, 3 at medium and above.
+  const columns = isNarrowWidth ? 1 : atLeastMediumWidth ? 3 : 2;
+  const wideSpan = atLeastMediumWidth ? 2 : 1;
 
   return (
     <Page header={t('Dashboard')}>
@@ -47,7 +56,13 @@ export function CustomDashboard() {
         <Button
           variant="bare"
           aria-label={t('Next month')}
-          onPress={() => setMonth(prev => monthUtils.addMonths(prev, 1))}
+          isDisabled={atMaxMonth}
+          onPress={() =>
+            setMonth(prev => {
+              const next = monthUtils.addMonths(prev, 1);
+              return next > maxMonth ? prev : next;
+            })
+          }
         >
           <SvgArrowRight width={12} height={12} />
         </Button>
@@ -56,12 +71,12 @@ export function CustomDashboard() {
       <View
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
           gap: 16,
         }}
       >
-        <View style={{ gridColumn: 'span 2', height: CARD_HEIGHT }}>
-          <ReportCard size={2}>
+        <View style={{ gridColumn: `span ${wideSpan}`, height: CARD_HEIGHT }}>
+          <ReportCard size={wideSpan}>
             <BudgetVsActualWidget month={month} />
           </ReportCard>
         </View>
@@ -70,9 +85,9 @@ export function CustomDashboard() {
             <CategoryBreakdownWidget month={month} />
           </ReportCard>
         </View>
-        <View style={{ gridColumn: 'span 3', height: CARD_HEIGHT }}>
-          <ReportCard size={3}>
-            <MonthlyTrendWidget numMonths={6} />
+        <View style={{ gridColumn: `span ${columns}`, height: CARD_HEIGHT }}>
+          <ReportCard size={columns}>
+            <MonthlyTrendWidget month={month} numMonths={6} />
           </ReportCard>
         </View>
       </View>

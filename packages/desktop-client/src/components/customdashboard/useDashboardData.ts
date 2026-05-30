@@ -30,6 +30,30 @@ function toNumber(value: unknown): number {
   return typeof value === 'number' ? value : 0;
 }
 
+// Sort categories by `valueOf` descending and roll the long tail past `limit`
+// into a single "Other" row so dense budgets stay readable. `otherLabel` is
+// passed in (translated) because this module is not a component.
+export function topNWithOther(
+  rows: CategoryBudgetRow[],
+  limit: number,
+  valueOf: (row: CategoryBudgetRow) => number,
+  otherLabel: string,
+): CategoryBudgetRow[] {
+  const sorted = [...rows].sort((a, b) => valueOf(b) - valueOf(a));
+  if (sorted.length <= limit) {
+    return sorted;
+  }
+
+  const rest = sorted.slice(limit);
+  const other: CategoryBudgetRow = {
+    id: '__other__',
+    name: otherLabel,
+    budgeted: rest.reduce((sum, row) => sum + row.budgeted, 0),
+    spent: rest.reduce((sum, row) => sum + row.spent, 0),
+  };
+  return [...sorted.slice(0, limit), other];
+}
+
 // Budgeted vs actual spending per expense category for a single month.
 // Reads the same budget-sheet cells the Budget page uses, so figures match
 // exactly. `sum-amount-{id}` is negative for spending; we surface it as a
@@ -108,7 +132,10 @@ function trendQuery(startMonth: string, endMonth: string, income: boolean) {
 
 // On-budget income vs expense totals for the last `numMonths` months,
 // excluding transfers. Expense is surfaced as a positive magnitude.
-export function useMonthlyTrend(numMonths: number = 6): {
+export function useMonthlyTrend(
+  numMonths: number = 6,
+  anchorMonth?: string,
+): {
   data: MonthlyTrendRow[];
   isLoading: boolean;
 } {
@@ -119,7 +146,7 @@ export function useMonthlyTrend(numMonths: number = 6): {
     let cancelled = false;
     setIsLoading(true);
 
-    const endMonth = monthUtils.currentMonth();
+    const endMonth = anchorMonth ?? monthUtils.currentMonth();
     const startMonth = monthUtils.subMonths(endMonth, numMonths - 1);
 
     Promise.all([
@@ -162,7 +189,7 @@ export function useMonthlyTrend(numMonths: number = 6): {
     return () => {
       cancelled = true;
     };
-  }, [numMonths]);
+  }, [numMonths, anchorMonth]);
 
   return { data, isLoading };
 }

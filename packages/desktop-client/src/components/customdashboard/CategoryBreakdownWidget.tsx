@@ -6,9 +6,10 @@ import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import { css } from '@emotion/css';
-import { Cell, Pie, PieChart, Tooltip } from 'recharts';
+import { Cell, Legend, Pie, PieChart, Tooltip } from 'recharts';
 
 import { FinancialText } from '#components/FinancialText';
+import { PrivacyFilter } from '#components/PrivacyFilter';
 import {
   getColorScale,
   useRechartsAnimation,
@@ -16,7 +17,7 @@ import {
 import { Container } from '#components/reports/Container';
 import { useFormat } from '#hooks/useFormat';
 
-import { useMonthlyCategoryBudget } from './useDashboardData';
+import { topNWithOther, useMonthlyCategoryBudget } from './useDashboardData';
 
 type CategoryBreakdownWidgetProps = {
   month: string;
@@ -56,9 +57,11 @@ function CustomTooltip({ active, payload, total, format }: TooltipProps) {
       <div style={{ marginBottom: 4 }}>
         <strong>{datum.name}</strong>
       </div>
-      <FinancialText>
-        {format(datum.spent, 'financial')} ({t('{{percent}}%', { percent })})
-      </FinancialText>
+      <PrivacyFilter>
+        <FinancialText>
+          {format(datum.spent, 'financial')} ({t('{{percent}}%', { percent })})
+        </FinancialText>
+      </PrivacyFilter>
     </div>
   );
 }
@@ -72,10 +75,12 @@ export function CategoryBreakdownWidget({
   const { data, isLoading } = useMonthlyCategoryBudget(month);
 
   const colors = getColorScale('qualitative');
-  const chartData: BreakdownDatum[] = data
-    .filter(row => row.spent > 0)
-    .sort((a, b) => b.spent - a.spent)
-    .map(row => ({ name: row.name, spent: row.spent }));
+  const chartData: BreakdownDatum[] = topNWithOther(
+    data.filter(row => row.spent > 0),
+    8,
+    row => row.spent,
+    t('Other'),
+  ).map(row => ({ name: row.name, spent: row.spent }));
   const total = chartData.reduce((sum, row) => sum + row.spent, 0);
 
   return (
@@ -102,15 +107,20 @@ export function CategoryBreakdownWidget({
       ) : (
         <Container>
           {(width, height) => (
-            <PieChart width={width} height={height}>
+            <PieChart
+              width={width}
+              height={height}
+              accessibilityLayer
+              aria-label={t('Spending share by category')}
+            >
               <Pie
                 data={chartData}
                 dataKey="spent"
                 nameKey="name"
                 cx="50%"
-                cy="50%"
-                innerRadius={Math.min(width, height) / 5}
-                outerRadius={Math.min(width, height) / 2.8}
+                cy="44%"
+                innerRadius={Math.min(width, height) / 6}
+                outerRadius={Math.min(width, height) / 3.2}
                 {...animationProps}
               >
                 {chartData.map((entry, index) => (
@@ -120,6 +130,11 @@ export function CategoryBreakdownWidget({
               <Tooltip
                 content={<CustomTooltip total={total} format={format} />}
                 isAnimationActive={false}
+              />
+              <Legend
+                verticalAlign="bottom"
+                iconSize={10}
+                wrapperStyle={{ fontSize: 11 }}
               />
             </PieChart>
           )}

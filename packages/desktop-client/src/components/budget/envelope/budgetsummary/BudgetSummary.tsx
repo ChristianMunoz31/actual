@@ -183,6 +183,16 @@ export const BudgetSummary = memo(({ month }: BudgetSummaryProps) => {
                       ),
                     });
                   }}
+                  onCopyToYearEndBudget={() => {
+                    onBudgetAction(month, 'copy-to-year-end');
+                    onMenuClose();
+                    showUndoNotification({
+                      message: t(
+                        '{{displayMonth}} budget has been copied to the rest of the year.',
+                        { displayMonth },
+                      ),
+                    });
+                  }}
                   onSetBudgetsToZero={() => {
                     onBudgetAction(month, 'set-zero');
                     onMenuClose();

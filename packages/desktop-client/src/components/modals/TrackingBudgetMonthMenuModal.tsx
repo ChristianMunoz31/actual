@@ -171,6 +171,16 @@ export function TrackingBudgetMonthMenuModal({
                     ),
                   });
                 }}
+                onCopyToYearEndBudget={() => {
+                  onBudgetAction(month, 'copy-to-year-end');
+                  state.close();
+                  showUndoNotification({
+                    message: t(
+                      '{{displayMonth}} budget has been copied to the rest of the year.',
+                      { displayMonth },
+                    ),
+                  });
+                }}
                 onSetBudgetsToZero={() => {
                   onBudgetAction(month, 'set-zero');
                   state.close();

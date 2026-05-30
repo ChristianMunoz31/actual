@@ -506,6 +506,11 @@ type ApplyBudgetActionPayload =
       args?: never;
     }
   | {
+      type: 'copy-to-year-end';
+      month: string;
+      args?: never;
+    }
+  | {
       type: 'set-zero';
       month: string;
       args?: never;
@@ -673,6 +678,9 @@ export function useBudgetActions() {
           return null;
         case 'copy-last':
           await send('budget/copy-previous-month', { month });
+          return null;
+        case 'copy-to-year-end':
+          await send('budget/copy-to-year-end', { month });
           return null;
         case 'set-zero':
           await send('budget/set-zero', { month });

@@ -591,6 +591,39 @@ export async function transferCategory({
   });
 }
 
+export async function copyToYearEnd({
+  month,
+}: {
+  month: string;
+}): Promise<void> {
+  const table = getBudgetTable();
+  const budgetData = await getBudgetData(table, dbMonth(month).toString());
+
+  const yearEnd = monthUtils.getYearEnd(month);
+  const { createdMonths } = sheet.get().meta();
+  const futureMonths = [...(createdMonths as Set<string>)]
+    .filter(m => m > month && m <= yearEnd)
+    .sort();
+
+  await batchMessages(async () => {
+    budgetData.forEach(budget => {
+      if (budget.is_income === 1 && !isTrackingBudget()) {
+        return;
+      }
+      if (budget.hidden === 1 || budget.group_hidden === 1) {
+        return;
+      }
+      for (const futureMonth of futureMonths) {
+        void setBudget({
+          category: budget.category,
+          month: futureMonth,
+          amount: budget.amount,
+        });
+      }
+    });
+  });
+}
+
 export async function copyUntilYearEnd({
   month,
   category,

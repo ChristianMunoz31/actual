@@ -8,7 +8,10 @@ import type {
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
-import { SvgArrowThinRight } from '@actual-app/components/icons/v1';
+import {
+  SvgArrowThinRight,
+  SvgExclamationOutline,
+} from '@actual-app/components/icons/v1';
 import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 import { Tooltip } from '@actual-app/components/tooltip';
@@ -95,6 +98,12 @@ type BalanceWithCarryoverProps = Omit<
   shouldInlineGoalStatus?: boolean;
   CarryoverIndicator?: ComponentType<CarryoverIndicatorProps>;
   tooltipDisabled?: boolean;
+  /**
+   * When true, shows a small warning icon in the (empty) left of the cell if
+   * the balance is negative — an at-a-glance overspend cue beyond color alone.
+   * Opt-in so only expense-category balances surface it.
+   */
+  showOverspentIndicator?: boolean;
 };
 
 export function BalanceWithCarryover({
@@ -107,6 +116,7 @@ export function BalanceWithCarryover({
   shouldInlineGoalStatus,
   CarryoverIndicator: CarryoverIndicatorComponent = CarryoverIndicator,
   tooltipDisabled,
+  showOverspentIndicator,
   children,
   ...props
 }: BalanceWithCarryoverProps) {
@@ -280,6 +290,26 @@ export function BalanceWithCarryover({
             )}
           </Tooltip>
 
+          {showOverspentIndicator && balanceValue < 0 && (
+            <View
+              title={t('Overspent')}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <SvgExclamationOutline
+                width={11}
+                height={11}
+                aria-label={t('Overspent')}
+                style={{ color: theme.budgetNumberNegative }}
+              />
+            </View>
+          )}
           {carryoverValue && (
             <CarryoverIndicatorComponent
               style={getBalanceAmountStyle(balanceValue)}

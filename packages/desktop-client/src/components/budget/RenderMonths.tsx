@@ -17,8 +17,8 @@ type RenderMonthsProps = {
 export function RenderMonths({ children, style }: RenderMonthsProps) {
   const { months } = useContext(MonthsContext);
 
-  return months.map((month, index) => (
-    <SheetNameProvider key={index} name={monthUtils.sheetForMonth(month)}>
+  return months.map(month => (
+    <SheetNameProvider key={month} name={monthUtils.sheetForMonth(month)}>
       <View
         style={{
           flex: 1,

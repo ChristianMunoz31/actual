@@ -14,6 +14,7 @@ import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 
+import { useCategories } from '#hooks/useCategories';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { RenderMonths } from './RenderMonths';
@@ -38,6 +39,11 @@ export const BudgetTotals = memo(function BudgetTotals({
   const categoryExpandedState = categoryExpandedStatePref ?? 0;
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef(null);
+
+  const { data: categoriesData } = useCategories();
+  const hiddenCategoryCount = (categoriesData?.list ?? []).filter(
+    category => category.hidden,
+  ).length;
 
   const cycleExpandedState = () => {
     const nextState = (categoryExpandedState + 1) % 3;
@@ -165,7 +171,12 @@ export const BudgetTotals = memo(function BudgetTotals({
             items={[
               {
                 name: 'toggle-visibility',
-                text: t('Toggle hidden categories'),
+                text:
+                  hiddenCategoryCount > 0
+                    ? t('Toggle hidden categories ({{count}})', {
+                        count: hiddenCategoryCount,
+                      })
+                    : t('Toggle hidden categories'),
               },
               {
                 name: 'expandAllCategories',

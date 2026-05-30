@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import React, { createContext } from 'react';
+import React, { createContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 import * as monthUtils from '@actual-app/core/shared/months';
@@ -42,13 +42,18 @@ export function MonthsProvider({
   type,
   children,
 }: MonthsProviderProps) {
-  const endMonth = monthUtils.addMonths(startMonth, numMonths - 1);
-  const bounds = getValidMonthBounds(monthBounds, startMonth, endMonth);
-  const months = monthUtils.rangeInclusive(bounds.start, bounds.end);
+  // Memoized so the context value (and the derived `months` array) keeps a
+  // stable identity across parent re-renders — otherwise every consumer
+  // (each month column / budget cell) re-renders on any parent change. This is
+  // the sanctioned manual-memo exception to React Compiler (a Context value).
+  const value = useMemo(() => {
+    const endMonth = monthUtils.addMonths(startMonth, numMonths - 1);
+    const bounds = getValidMonthBounds(monthBounds, startMonth, endMonth);
+    const months = monthUtils.rangeInclusive(bounds.start, bounds.end);
+    return { months, type };
+  }, [startMonth, numMonths, monthBounds, type]);
 
   return (
-    <MonthsContext.Provider value={{ months, type }}>
-      {children}
-    </MonthsContext.Provider>
+    <MonthsContext.Provider value={value}>{children}</MonthsContext.Provider>
   );
 }
